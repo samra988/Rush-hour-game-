@@ -1,0 +1,299 @@
+INCLUDE Irvine32.inc 
+.386
+.model small
+.stack 5000
+
+.data
+menuHeader DB "*** RUSH HOUR GAME Taxi Driver ***",0
+menuSpacer DB 13,10,0
+
+option1 DB "1. Start New Game",0
+option2 DB "2. Continue Game",0
+option3 DB "3. Change Difficulty Level",0
+option4 DB "4. View Leader Board",0
+option5 DB "5. Instructions",0
+option6 DB "6. Exit",0
+
+SelectOptionMsg DB "Select an option (1-6): ",0
+invalidMsg DB "Invalid choice. Press any key to return to menu...",0
+difficultyMsg DB "Current difficulty: ",0
+savedMsg DB "Saved game exists. You can continue.",0
+noSavedMsg DB "No saved game found. Start a new game first.",0
+pressAny DB "Press any key to continue...",0
+
+difficulty DWORD 1
+savedGameFlag DWORD 0
+
+strEasy DB "Easy",0
+strMedium DB "Medium",0
+strHard DB "Hard",0
+
+lbHeader DB "*** LEADER BOARD ***",0
+lbEntry1 DB "1) Alex - 1200",0
+lbEntry2 DB "2) Priya - 900",0
+
+instrHeader DB "*** INSTRUCTIONS ***",0
+instr1 DB " 1. Pick up passengers and drop them at destinations to earn money.",0
+instr2 DB " 2. Avoid collisions or hitting a person.",0
+instr3 DB " 3. Difficulty affects traffic density and passenger patience.",0
+
+exitMsg DB "Exiting game Thank you for playing Rush Hour!",0
+
+.code
+main PROC
+    call InitConsole
+
+mainLoop:
+    call ShowMenu
+    call GetMenuChoice        ; AL contains choice
+
+    cmp al,1
+    je StartNew
+    cmp al,2
+    je ContinueGame
+    cmp al,3
+    je ChangeDifficulty
+    cmp al,4
+    je ShowLeaderboard
+    cmp al,5
+    je ShowInstructions
+    cmp al,6
+    je ExitGame
+
+    mov edx, OFFSET invalidMsg
+    call WriteString
+    call Crlf
+    call ReadChar
+    jmp mainLoop
+
+; ----------------------------
+StartNew:
+    mov edx, OFFSET menuSpacer
+    call WriteString
+
+    mov edx, OFFSET option1
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET menuHeader
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET pressAny
+    call WriteString
+    call Crlf
+
+    mov savedGameFlag, 1
+    call ReadChar
+    jmp mainLoop
+
+; ----------------------------
+ContinueGame:
+    mov eax, savedGameFlag
+    cmp eax, 0
+    je NoSaved
+
+    mov edx, OFFSET savedMsg
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET pressAny
+    call WriteString
+    call Crlf
+
+    call ReadChar
+    jmp mainLoop
+
+NoSaved:
+    mov edx, OFFSET noSavedMsg
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET pressAny
+    call WriteString
+    call Crlf
+
+    call ReadChar
+    jmp mainLoop
+
+; ----------------------------
+ChangeDifficulty:
+    mov eax, difficulty
+    inc eax
+    cmp eax, 3
+    jl CD_SkipWrap
+    mov eax, 0
+
+CD_SkipWrap:
+    mov difficulty, eax
+
+    mov edx, OFFSET difficultyMsg
+    call WriteString
+    call Crlf
+
+    mov eax, difficulty
+    cmp eax, 0
+    je DifEasy
+    cmp eax, 1
+    je DifMedium
+    cmp eax, 2
+    je DifHard
+
+DifEasy:
+    mov edx, OFFSET strEasy
+    call WriteString
+    jmp DifDone
+
+DifMedium:
+    mov edx, OFFSET strMedium
+    call WriteString
+    jmp DifDone
+
+DifHard:
+    mov edx, OFFSET strHard
+    call WriteString
+
+DifDone:
+    call Crlf
+    mov edx, OFFSET pressAny
+    call WriteString
+    call Crlf
+    call ReadChar
+    jmp mainLoop
+
+; ----------------------------
+ShowLeaderboard:
+    mov edx, OFFSET menuSpacer
+    call WriteString
+
+    mov edx, OFFSET lbHeader
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET lbEntry1
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET lbEntry2
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET pressAny
+    call WriteString
+    call Crlf
+
+    call ReadChar
+    jmp mainLoop
+
+; ----------------------------
+ShowInstructions:
+    mov edx, OFFSET instrHeader
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET instr1
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET instr2
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET instr3
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET pressAny
+    call WriteString
+    call Crlf
+
+    call ReadChar
+    jmp mainLoop
+
+; ----------------------------
+ExitGame:
+    mov edx, OFFSET exitMsg
+    call WriteString
+    call Crlf
+    call ReadChar
+    invoke ExitProcess, 0
+
+; ----------------------------
+ShowMenu PROC
+    call InitConsole
+    mov eax,white (blue * 16) ; white on blue
+    call SetTextColor
+    mov edx, OFFSET menuHeader
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET option1
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET option2
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET option3
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET option4
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET option5
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET option6
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET difficultyMsg
+    call WriteString
+
+    mov eax, difficulty
+    cmp eax, 0
+    je EASY
+    cmp eax, 1
+    je MED
+    cmp eax, 2
+    je HARD
+
+EASY:
+    mov edx, OFFSET strEasy
+    call WriteString
+    jmp DONE
+
+MED:
+    mov edx, OFFSET strMedium
+    call WriteString
+    jmp DONE
+
+HARD:
+    mov edx, OFFSET strHard
+    call WriteString
+
+DONE:
+    call Crlf
+    mov edx, OFFSET SelectOptionMsg
+    call WriteString
+    ret
+ShowMenu ENDP
+
+; ----------------------------
+GetMenuChoice PROC
+    call ReadInt
+    call Crlf
+    ret
+GetMenuChoice ENDP
+
+InitConsole PROC
+    call Clrscr  
+    ret
+InitConsole ENDP
+
+main ENDP
+END main
