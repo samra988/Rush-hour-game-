@@ -1,0 +1,306 @@
+INCLUDE Irvine32.inc
+
+.data
+    ; Board dimensions
+    BOARD_SIZE = 20
+    CELL_SIZE = 20        ; pixels per cell
+    
+    ; Colors
+    WHITE_COLOR = 15      ; roads (white)
+    BLACK_COLOR = 0       ; buildings (black)
+    YELLOW_COLOR = 14     ; yellow taxi
+    RED_COLOR = 4         ; red taxi
+    BLUE_COLOR = 1        ; other cars
+    
+    ; Board array (0 = road, 1 = building)
+    board BYTE BOARD_SIZE * BOARD_SIZE DUP(0)
+    
+    ; Car position
+    carX BYTE 0           ; taxi X position (top-left corner)
+    carY BYTE 0           ; taxi Y position
+    carColor BYTE 14      ; default yellow
+    
+    ; Window title
+    windowTitle BYTE "Rush Hour Game",0
+
+.code
+main PROC
+    ; Initialize the board with buildings
+    call InitializeBoard
+    
+    ; Set up graphics window
+    call SetupWindow
+    
+    ; Main game loop
+    GameLoop:
+        call DrawBoard
+        call DrawCar
+        call Delay
+        
+        ; Check for key press (ESC to exit for now)
+        call ReadKey
+        jz GameLoop
+        cmp al, 27          ; ESC key
+        jne GameLoop
+    
+    exit
+main ENDP
+
+;----------------------------------------------------
+InitializeBoard PROC
+; Creates a sample board layout with buildings
+; You can modify this to randomize building placement
+;----------------------------------------------------
+    push eax
+    push ebx
+    push ecx
+    push edx
+    
+    ; Clear board (all roads initially)
+    mov ecx, BOARD_SIZE * BOARD_SIZE
+    mov esi, OFFSET board
+    ClearLoop:
+        mov BYTE PTR [esi], 0
+        inc esi
+        loop ClearLoop
+    
+    ; Add some building blocks (roughly 35% of board)
+    ; Building block 1: rows 3-6, cols 3-7
+    mov edx, 3          ; start row
+    BuildBlock1Row:
+        cmp edx, 7
+        jge BuildBlock2
+        mov ebx, 3      ; start col
+        BuildBlock1Col:
+            cmp ebx, 8
+            jge NextRow1
+            ; Calculate index: row * BOARD_SIZE + col
+            mov eax, edx
+            mov ecx, BOARD_SIZE
+            mul ecx
+            add eax, ebx
+            mov esi, OFFSET board
+            add esi, eax
+            mov BYTE PTR [esi], 1  ; mark as building
+            inc ebx
+            jmp BuildBlock1Col
+        NextRow1:
+        inc edx
+        jmp BuildBlock1Row
+    
+    ; Building block 2: rows 3-6, cols 12-16
+    BuildBlock2:
+    mov edx, 3
+    BuildBlock2Row:
+        cmp edx, 7
+        jge BuildBlock3
+        mov ebx, 12
+        BuildBlock2Col:
+            cmp ebx, 17
+            jge NextRow2
+            mov eax, edx
+            mov ecx, BOARD_SIZE
+            mul ecx
+            add eax, ebx
+            mov esi, OFFSET board
+            add esi, eax
+            mov BYTE PTR [esi], 1
+            inc ebx
+            jmp BuildBlock2Col
+        NextRow2:
+        inc edx
+        jmp BuildBlock2Row
+    
+    ; Building block 3: rows 10-14, cols 5-10
+    BuildBlock3:
+    mov edx, 10
+    BuildBlock3Row:
+        cmp edx, 15
+        jge BuildBlock4
+        mov ebx, 5
+        BuildBlock3Col:
+            cmp ebx, 11
+            jge NextRow3
+            mov eax, edx
+            mov ecx, BOARD_SIZE
+            mul ecx
+            add eax, ebx
+            mov esi, OFFSET board
+            add esi, eax
+            mov BYTE PTR [esi], 1
+            inc ebx
+            jmp BuildBlock3Col
+        NextRow3:
+        inc edx
+        jmp BuildBlock3Row
+    
+    ; Building block 4: rows 10-14, cols 14-18
+    BuildBlock4:
+    mov edx, 10
+    BuildBlock4Row:
+        cmp edx, 15
+        jge DoneBuildings
+        mov ebx, 14
+        BuildBlock4Col:
+            cmp ebx, 19
+            jge NextRow4
+            mov eax, edx
+            mov ecx, BOARD_SIZE
+            mul ecx
+            add eax, ebx
+            mov esi, OFFSET board
+            add esi, eax
+            mov BYTE PTR [esi], 1
+            inc ebx
+            jmp BuildBlock4Col
+        NextRow4:
+        inc edx
+        jmp BuildBlock4Row
+    
+    DoneBuildings:
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+InitializeBoard ENDP
+
+;----------------------------------------------------
+SetupWindow PROC
+; Sets up the graphics window
+;----------------------------------------------------
+    ; Optional: You can use Irvine's graphics procedures here
+    ; For text mode, just clear screen
+    call Clrscr
+    ret
+SetupWindow ENDP
+
+;----------------------------------------------------
+DrawBoard PROC
+; Draws the 20x20 board with buildings and roads
+;----------------------------------------------------
+    push eax
+    push ebx
+    push ecx
+    push edx
+    
+    call Clrscr
+    mov dh, 0           ; start row
+    
+    DrawRow:
+        cmp dh, BOARD_SIZE
+        jge DoneDrawing
+        mov dl, 0       ; start column
+        
+        DrawCol:
+            cmp dl, BOARD_SIZE
+            jge NextDrawRow
+            
+            ; Set cursor position
+            call Gotoxy
+            
+            ; Get board value at [row][col]
+            movzx eax, dh
+            mov ecx, BOARD_SIZE
+            mul ecx
+            movzx ebx, dl
+            add eax, ebx
+            mov esi, OFFSET board
+            add esi, eax
+            movzx eax, BYTE PTR [esi]
+            
+            ; Set color and draw
+            cmp eax, 1
+            je DrawBuilding
+            ; Draw road (white background)
+            mov eax, WHITE_COLOR
+            call SetTextColor
+            mov al, ' '
+            call WriteChar
+            jmp NextCol
+            
+            DrawBuilding:
+            ; Draw building (black background)
+            mov eax, BLACK_COLOR
+            shl eax, 4      ; background color
+            add eax, BLACK_COLOR
+            call SetTextColor
+            mov al, 219     ; solid block character
+            call WriteChar
+            
+            NextCol:
+            inc dl
+            jmp DrawCol
+        
+        NextDrawRow:
+        inc dh
+        jmp DrawRow
+    
+    DoneDrawing:
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+DrawBoard ENDP
+
+;----------------------------------------------------
+DrawCar PROC
+; Draws a basic car (rectangle with two circles)
+; Car position is at carX, carY
+;----------------------------------------------------
+    push eax
+    push edx
+    
+    ; Set car color
+    movzx eax, carColor
+    call SetTextColor
+    
+    ; Draw car body (2x4 rectangle)
+    ; Top of car
+    movzx dh, carY
+    movzx dl, carX
+    call Gotoxy
+    mov al, 219
+    call WriteChar
+    call WriteChar
+    call WriteChar
+    call WriteChar
+    
+    ; Middle of car
+    inc dh
+    movzx dl, carX
+    call Gotoxy
+    mov al, 219
+    call WriteChar
+    call WriteChar
+    call WriteChar
+    call WriteChar
+    
+    ; Draw wheels (circles represented by 'O')
+    inc dh
+    movzx dl, carX
+    call Gotoxy
+    mov al, 'O'
+    call WriteChar
+    add dl, 3
+    call Gotoxy
+    call WriteChar
+    
+    pop edx
+    pop eax
+    ret
+DrawCar ENDP
+
+;----------------------------------------------------
+Delay PROC
+; Simple delay for animation
+;----------------------------------------------------
+    push eax
+    mov eax, 100
+    call Delay
+    pop eax
+    ret
+Delay ENDP
+
+END main
